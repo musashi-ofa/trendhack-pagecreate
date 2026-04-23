@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>整骨院ページ作成アシスタント</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy: #0D2344;
+  --pink: #E87CA0;
+  --pink-light: #fdf0f5;
+  --gray-bg: #f7f7f5;
+  --gray-border: #e4e2dc;
+  --gray-text: #888780;
+  --text: #1a1a18;
+  --text-sub: #5a5a58;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+body {
+  font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+  background: var(--gray-bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.7;
+  min-height: 100vh;
+}
+
+/* ヘッダー */
+.header {
+  background: var(--navy);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-icon { font-size: 22px; }
+.header-title { color: #fff; font-size: 16px; font-weight: 600; }
+.header-sub { color: rgba(255,255,255,0.5); font-size: 12px; }
+
+/* コンテナ */
+.container { max-width: 800px; margin: 0 auto; padding: 28px 20px 80px; }
+
+/* カード */
+.card {
+  background: #fff;
+  border: 1px solid var(--gray-border);
+  border-radius: var(--radius);
+  padding: 22px;
+  margin-bottom: 18px;
+}
+.card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gray-text);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 13px;
+  background: var(--pink);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ページタイプ */
+.type-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.type-btn {
+  padding: 12px 6px;
+  border: 1.5px solid var(--gray-border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  cursor: pointer;
+  text-align: center;
+  transition: all .15s;
+}
+.type-btn:hover { border-color: var(--pink); background: var(--pink-light); }
+.type-btn.active { border-color: var(--navy); background: var(--navy); color: #fff; }
+.type-btn .t-icon { font-size: 20px; margin-bottom: 5px; }
+.type-btn .t-name { font-size: 12px; font-weight: 700; display: block; }
+.type-btn .t-desc { font-size: 11px; color: var(--gray-text); margin-top: 2px; display: block; line-height: 1.3; }
+.type-btn.active .t-desc { color: rgba(255,255,255,0.55); }
+.type-note {
+  font-size: 13px;
+  color: var(--text-sub);
+  background: var(--gray-bg);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-top: 12px;
+  line-height: 1.6;
+}
+
+/* タブ */
+.tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.tab {
+  padding: 6px 16px;
+  font-size: 13px;
+  border-radius: 999px;
+  border: 1px solid var(--gray-border);
+  background: #fff;
+  color: var(--gray-text);
+  cursor: pointer;
+  transition: all .15s;
+}
+.tab.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+.pane { display: none; }
+.pane.active { display: block; }
+
+/* フォーム */
+.form-row { margin-bottom: 14px; }
+label { display: block; font-size: 13px; font-weight: 600; color: var(--text-sub); margin-bottom: 5px; }
+input, textarea, select {
+  width: 100%;
+  font-size: 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--gray-border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text);
+  font-family: inherit;
+  line-height: 1.6;
+  transition: border-color .15s;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--navy); }
+textarea { resize: vertical; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* アップロード */
+.upload-zone {
+  border: 2px dashed var(--gray-border);
+  border-radius: var(--radius);
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .15s;
+}
+.upload-zone:hover { border-color: var(--pink); background: var(--pink-light); }
+.upload-zone input { display: none; }
+.upload-zone .u-icon { font-size: 28px; margin-bottom: 6px; }
+.upload-zone .u-text { font-size: 14px; color: var(--text-sub); }
+.upload-zone .u-hint { font-size: 12px; color: var(--gray-text); margin-top: 3px; }
+.preview-box {
+  background: var(--gray-bg);
+  border: 1px solid var(--gray-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text-sub);
+  line-height: 1.8;
+  max-height: 140px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+.preview-box strong { color: var(--text); font-weight: 600; }
+.badge { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 999px; font-weight: 600; margin-top: 8px; }
+.badge-ok { background: #e6f4ec; color: #166534; }
+.badge-err { background: #fee2e2; color: #991b1b; }
+
+/* チップ */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip {
+  padding: 4px 12px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--gray-border);
+  background: #fff;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: all .15s;
+}
+.chip:hover { border-color: var(--pink); color: var(--navy); }
+
+/* 症状入力 */
+.symptom-input-row { display: flex; gap: 10px; align-items: flex-end; }
+.symptom-input-row input { flex: 1; }
+
+/* ボタン */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn-block { display: flex; width: 100%; }
+.btn-primary { background: var(--navy); color: #fff; }
+.btn-primary:hover { background: #1a3a6e; }
+.btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+.btn-copy { background: var(--pink); color: #fff; }
+.btn-copy:hover { background: #d4608a; }
+.btn-outline { background: #fff; color: var(--navy); border: 1.5px solid var(--navy); }
+.btn-outline:hover { background: var(--gray-bg); }
+
+/* 結果エリア */
+.result-area { margin-top: 20px; }
+.result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+.result-label { font-size: 13px; font-weight: 700; color: var(--text-sub); }
+.result-box {
+  background: var(--gray-bg);
+  border: 1px solid var(--gray-border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  font-size: 14px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 600px;
+  overflow-y: auto;
+}
+.result-box h2 { font-size: 15px; font-weight: 700; color: var(--navy); margin: 18px 0 6px; border-left: 3px solid var(--pink); padding-left: 10px; }
+.result-box h2:first-child { margin-top: 0; }
+
+/* ローディング */
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  color: var(--gray-text);
+  font-size: 14px;
+}
+.dots { display: flex; gap: 5px; }
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--pink);
+  animation: pulse 1.2s infinite;
+}
+.dot:nth-child(2) { animation-delay: .2s; }
+.dot:nth-child(3) { animation-delay: .4s; }
+@keyframes pulse { 0%,80%,100%{opacity:.2;transform:scale(1)}40%{opacity:1;transform:scale(1.2)} }
+
+/* エラー */
+.error-box {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  font-size: 13px;
+  color: #991b1b;
+  margin-top: 14px;
+  line-height: 1.6;
+}
+
+/* コピー成功 */
+.copy-toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--navy);
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0;
+  transition: all .3s;
+  pointer-events: none;
+  z-index: 999;
+}
+.copy-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ヒント */
+.hint { font-size: 12px; color: var(--gray-text); margin-top: 4px; }
+
+@media (max-width: 600px) {
+  .type-grid { grid-template-columns: repeat(2,1fr); }
+  .grid2 { grid-template-columns: 1fr; }
+  .symptom-input-row { flex-direction: column; }
+  .symptom-input-row input { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">📋</div>
+  <div>
+    <div class="header-title">整骨院ページ作成アシスタント</div>
+    <div class="header-sub">症状名を入力してAIで原稿を生成</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- STEP1: ページ種類 -->
+  <div class="card">
+    <div class="card-title">Step 1　ページの種類を選ぶ</div>
+    <div class="type-grid">
+      <div class="type-btn active" onclick="selectType('acute')" id="type-acute">
+        <div class="t-icon">⚡</div>
+        <span class="t-name">急性症状</span>
+        <span class="t-desc">ぎっくり腰・寝違えなど</span>
+      </div>
+      <div class="type-btn" onclick="selectType('chronic')" id="type-chronic">
+        <div class="t-icon">🔄</div>
+        <span class="t-name">慢性症状</span>
+        <span class="t-desc">肩こり・腰痛など</span>
+      </div>
+      <div class="type-btn" onclick="selectType('accident')" id="type-accident">
+        <div class="t-icon">🚗</div>
+        <span class="t-name">交通事故</span>
+        <span class="t-desc">むちうち・事故後</span>
+      </div>
+      <div class="type-btn" onclick="selectType('postnatal')" id="type-postnatal">
+        <div class="t-icon">🌸</div>
+        <span class="t-name">産後骨盤矯正</span>
+        <span class="t-desc">産後ケア・骨盤</span>
+      </div>
+    </div>
+    <div class="type-note" id="typeNote">突然の痛みや動かしにくさで不安な方向け。「今の状態でも相談してよさそう」と感じてもらえるやさしいトーンで作ります。</div>
+  </div>
+
+  <!-- STEP2: シート読み込み -->
+  <div class="card">
+    <div class="card-title">Step 2　ヒアリングシートを読み込む</div>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('upload')">シートを読み込む（.xlsx）</div>
+      <div class="tab" onclick="switchTab('manual')">手入力する</div>
+    </div>
+
+    <div class="pane active" id="pane-upload">
+      <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(event)" />
+        <div class="u-icon">📄</div>
+        <div class="u-text">クリックしてヒアリングシートを選択</div>
+        <div class="u-hint">.xlsx / .xls 対応</div>
+      </div>
+      <div id="parseStatus" style="display:none;"></div>
+      <div id="parsedPreview" class="preview-box" style="display:none;"></div>
+    </div>
+
+    <div class="pane" id="pane-manual">
+      <div class="grid2">
+        <div class="form-row"><label>院名</label><input id="m_name" placeholder="例：さくら整骨院" /></div>
+        <div class="form-row"><label>エリア・地域</label><input id="m_area" placeholder="例：福岡市東区" /></div>
+      </div>
+      <div class="form-row"><label>院のコンセプト・特徴</label><textarea id="m_concept" rows="3"></textarea></div>
+      <div class="form-row"><label>施術方針・強み</label><textarea id="m_policy" rows="3"></textarea></div>
+      <div class="grid2">
+        <div class="form-row"><label>営業時間・予約方法</label><input id="m_hours" /></div>
+        <div class="form-row"><label>アクセス</label><input id="m_access" /></div>
+      </div>
+      <div class="form-row"><label>FAQ候補・その他</label><textarea id="m_extra" rows="3"></textarea></div>
+    </div>
+  </div>
+
+  <!-- STEP3: 症状入力 & 生成 -->
+  <div class="card">
+    <div class="card-title">Step 3　症状名を入力して生成する</div>
+
+    <div class="form-row">
+      <label id="symptomLabel">症状名</label>
+      <div class="symptom-input-row">
+        <input id="symptomInput" placeholder="例：肩こり" />
+        <button class="btn btn-primary" onclick="generate()" id="genBtn">
+          ✨ 原稿を生成する
+        </button>
+      </div>
+      <p class="hint">よく使う症状名をクリックで入力できます</p>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <!-- ローディング -->
+    <div class="loading" id="loadingEl" style="display:none;">
+      <div class="dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      <span>AIが原稿を生成しています。少々お待ちください…</span>
+    </div>
+
+    <!-- エラー -->
+    <div class="error-box" id="errorBox" style="display:none;"></div>
+
+    <!-- 結果 -->
+    <div class="result-area" id="resultArea" style="display:none;">
+      <div class="result-header">
+        <div class="result-label" id="resultLabel">生成結果</div>
+        <button class="btn btn-copy" onclick="copyResult()">📋 全文コピー</button>
+      </div>
+      <div class="result-box" id="resultBox"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="copy-toast" id="toast">コピーしました！</div>
+
+<script>
+let parsedData = null;
+let currentType = 'acute';
+
+const typeConfig = {
+  acute: {
+    label: '急性症状',
+    note: '突然の痛みや動かしにくさで不安な方向け。「今の状態でも相談してよさそう」と感じてもらえるやさしいトーンで作ります。',
+    chips: ['ぎっくり腰','寝違え','捻挫','急な腰痛','急な首の痛み','急な背中の痛み'],
+    showSymptom: true,
+    system: s => `あなたは整骨院・整体院ホームページ制作に特化した急性症状ページ作成アシスタントです。
+「${s}」の急性症状ページを、突然の痛みで不安な方に寄り添うやさしいトーンで作成してください。
+禁止表現：必ず改善・絶対によくなる・すぐ治る・一回で治る・日本一・劇的改善・完治保証・恐怖をあおる表現。
+です・ます調。「患者さん」使用。院の情報を必ず反映し抽象文にしない。`,
+  },
+  chronic: {
+    label: '慢性症状',
+    note: '長引く痛みやだるさに悩む方向け。「ずっと我慢してきた方」に寄り添い、あきらめずに相談できると感じてもらえるページを作ります。',
+    chips: ['首こり','肩こり','腰痛','頭痛','膝の痛み','股関節痛','坐骨神経痛','五十肩','猫背'],
+    showSymptom: true,
+    system: s => `あなたは整骨院・整体院ホームページ制作に特化した慢性症状ページ作成アシスタントです。
+「${s}」の慢性症状ページを、長年悩んでいる方に寄り添うやさしいトーンで作成してください。
+禁止表現：必ず改善・絶対によくなる・すぐ治る・一回で治る・日本一・劇的改善・完治保証・恐怖をあおる表現。
+です・ます調。「患者さん」使用。院の情報を必ず反映し抽象文にしない。`,
+  },
+  accident: {
+    label: '交通事故',
+    note: '事故後の不安や戸惑いを受け止め、「まず相談してみよう」と思えるページを作ります。保険・手続きの説明も安全な表現で含めます。',
+    chips: [],
+    showSymptom: false,
+    system: () => `あなたは整骨院・整体院ホームページ制作に特化した交通事故ページ作成アシスタントです。
+交通事故後の不安を抱える方に安心感を与えるやさしいトーンで作成してください。
+保険・法律・補償について断定的な表現は使わないでください。
+禁止表現：必ず改善・絶対によくなる・一回で治る・日本一・劇的改善・完治保証・恐怖をあおる表現。
+です・ます調。「患者さん」使用。院の情報を必ず反映し抽象文にしない。`,
+  },
+  postnatal: {
+    label: '産後骨盤矯正',
+    note: '産後の不調や育児疲れに悩むお母さんへ。「子連れでも大丈夫」「無理なく相談できる」という安心感を伝えるページを作ります。',
+    chips: [],
+    showSymptom: false,
+    system: () => `あなたは整骨院・整体院ホームページ制作に特化した産後骨盤矯正ページ作成アシスタントです。
+産後の不調・育児疲れに悩むお母さんに寄り添うやさしいトーンで作成してください。
+見た目訴求だけに偏らず日常生活の負担にも寄り添う内容に。
+禁止表現：骨盤が必ず閉まる・必ず改善・絶対によくなる・日本一・劇的改善・完治保証。
+です・ます調。「患者さん」使用。院の情報を必ず反映し抽象文にしない。`,
+  },
+};
+
+const sectionInstructions = {
+  acute: `以下の12項目をすべて出力してください。各見出しは「## 見出し名」の形式で。
+## ファーストビュー見出し
+## ファーストビューのサブコピー
+## こんなお悩みはありませんか（箇条書き4〜6個）
+## 無理をするとどうなりやすいか
+## 急性症状で考えられる主な要因
+## 当院ではこう考えています
+## 当院の施術方針
+## 当院が選ばれる理由（3〜5項目、見出し+説明文）
+## 来院前に知っておきたいこと
+## よくある質問（5個、Q:〜 A:〜の形式で）
+## こんな方はご相談ください（箇条書き4〜6個）
+## 予約導線用の締め文`,
+
+  chronic: `以下の12項目をすべて出力してください。各見出しは「## 見出し名」の形式で。
+## ファーストビュー見出し
+## ファーストビューのサブコピー
+## こんなお悩みはありませんか（箇条書き4〜6個）
+## 放っておくとどうなるか
+## 主な原因
+## 当院ではこう考えています
+## 当院の施術方針
+## 当院が選ばれる理由（3〜5項目、見出し+説明文）
+## 施術の流れ（ご予約→来院・受付→カウンセリング→状態確認→施術→ご説明・お会計の流れで）
+## よくある質問（5個、Q:〜 A:〜の形式で）
+## こんな方はご相談ください（箇条書き4〜6個）
+## 予約導線用の締め文`,
+
+  accident: `以下の12項目をすべて出力してください。各見出しは「## 見出し名」の形式で。
+## ファーストビュー見出し
+## ファーストビューのサブコピー
+## 交通事故後、こんなお悩みはありませんか（箇条書き4〜6個）
+## 事故後すぐに症状が強く出ないこともあります
+## 交通事故後に起こりやすい不調
+## 当院ではこう考えています
+## 当院の対応方針
+## 当院が選ばれる理由（3〜5項目、見出し+説明文）
+## 交通事故後のご相談でよくある不安（3〜5項目）
+## よくある質問（5個、Q:〜 A:〜の形式で）
+## こんな方はご相談ください（箇条書き4〜6個）
+## 予約導線用の締め文`,
+
+  postnatal: `以下の12項目をすべて出力してください。各見出しは「## 見出し名」の形式で。
+## ファーストビュー見出し
+## ファーストビューのサブコピー
+## 産後、こんなお悩みはありませんか（箇条書き4〜6個）
+## 産後のお体にはさまざまな変化が起こりやすくなります
+## 産後に起こりやすいお悩み
+## 当院ではこう考えています
+## 当院の施術方針
+## 当院が選ばれる理由（3〜5項目、見出し+説明文）
+## 来院前に知っておきたいこと（3〜5項目）
+## よくある質問（5個、Q:〜 A:〜の形式で）
+## こんな方はご相談ください（箇条書き4〜6個）
+## 予約導線用の締め文`,
+};
+
+function selectType(type) {
+  currentType = type;
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('type-' + type).classList.add('active');
+  const cfg = typeConfig[type];
+  document.getElementById('typeNote').textContent = cfg.note;
+  const chipsEl = document.getElementById('chips');
+  chipsEl.innerHTML = cfg.chips.map(c =>
+    `<span class="chip" onclick="document.getElementById('symptomInput').value='${c}'">${c}</span>`
+  ).join('');
+  const symWrap = document.getElementById('symptomLabel');
+  const symInput = document.getElementById('symptomInput');
+  if (cfg.showSymptom) {
+    symWrap.textContent = '症状名';
+    symInput.disabled = false;
+    symInput.placeholder = type === 'acute' ? '例：ぎっくり腰、寝違え' : '例：肩こり、腰痛';
+  } else {
+    symWrap.textContent = '症状名（このページ種別では不要です）';
+    symInput.disabled = true;
+    symInput.value = '';
+  }
+  document.getElementById('resultArea').style.display = 'none';
+  document.getElementById('errorBox').style.display = 'none';
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) =>
+    t.classList.toggle('active', (tab === 'upload' && i === 0) || (tab === 'manual' && i === 1))
+  );
+  document.getElementById('pane-upload').classList.toggle('active', tab === 'upload');
+  document.getElementById('pane-manual').classList.toggle('active', tab === 'manual');
+}
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const wb = XLSX.read(ev.target.result, { type: 'array' });
+      const sn = wb.SheetNames.find(n => n.includes('入力') || n.includes('ヒアリング')) || wb.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' });
+      const data = {};
+      for (const row of rows) {
+        const k = String(row[1] || '').trim();
+        const v = String(row[2] || '').trim();
+        if (k && v && v !== '回答' && k !== '項目') data[k] = v;
+      }
+      parsedData = data;
+      const keys = ['院名','院長名','住所','営業時間・休診日','院のコンセプト','他院との違い・強み','院の特徴①','対応症状'];
+      let html = '';
+      for (const k of keys) { if (data[k]) html += `<div><strong>${k}：</strong>${data[k]}</div>`; }
+      document.getElementById('parseStatus').innerHTML = `<span class="badge badge-ok">✓ 読み込み完了：${Object.keys(data).length}項目 ／ ${file.name}</span>`;
+      document.getElementById('parseStatus').style.display = 'block';
+      document.getElementById('parsedPreview').innerHTML = html;
+      document.getElementById('parsedPreview').style.display = 'block';
+    } catch {
+      document.getElementById('parseStatus').innerHTML = '<span class="badge badge-err">読み取りエラー：ファイルを確認してください</span>';
+      document.getElementById('parseStatus').style.display = 'block';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function buildClinicInfo() {
+  const isUpload = document.getElementById('pane-upload').classList.contains('active');
+  if (isUpload && parsedData) {
+    const g = k => parsedData[k] || '（未入力）';
+    return `【院名】${g('院名')}
+【院長名】${g('院長名')}
+【住所・エリア】${g('住所')}
+【最寄駅・アクセス】${g('最寄駅・アクセス')}
+【営業時間・休診日】${g('営業時間・休診日')}
+【駐車場】${g('駐車場の有無')}
+【予約方法】${g('現在の予約方法')}
+【ターゲット患者層】${g('主なターゲット患者層')}
+【来てほしい患者像】${g('来てほしい患者像')}
+【院のコンセプト】${g('院のコンセプト')}
+【他院との違い・強み】${g('他院との違い・強み')}
+【院の特徴①】${g('院の特徴①')}
+【院の特徴②】${g('院の特徴②')}
+【院の特徴③】${g('院の特徴③')}
+【院の特徴④】${g('院の特徴④')}
+【院の特徴⑤】${g('院の特徴⑤')}
+【対応症状】${g('対応症状')}
+【治療の特徴】${g('治療の特徴')}
+【提供メニュー】${g('提供メニュー一覧')}
+【特に訴求したい機器】${g('特に訴求したい機器')}
+【初診の流れ】${g('初診〜施術の流れ')}
+【通院頻度の目安】${g('通院頻度の目安')}
+【料金】${g('料金表')}
+【保険診療】${g('保険診療の有無')}
+【開業年数】${g('開業年数')}
+【資格】${g('資格・所属')}
+【施術実績】${g('施術実績')}
+【口コミ】${g('Google口コミ件数・評価')}
+【FAQ候補】${g('FAQ候補')}
+【初めての方へのメッセージ】${g('初めての方へのメッセージ')}`;
+  }
+  return `【院名】${document.getElementById('m_name').value || '（未入力）'}
+【エリア】${document.getElementById('m_area').value || '（未入力）'}
+【院のコンセプト・特徴】${document.getElementById('m_concept').value || '（未入力）'}
+【施術方針・強み】${document.getElementById('m_policy').value || '（未入力）'}
+【営業時間・予約方法】${document.getElementById('m_hours').value || '（未入力）'}
+【アクセス】${document.getElementById('m_access').value || '（未入力）'}
+【FAQ候補・その他】${document.getElementById('m_extra').value || '（未入力）'}`;
+}
+
+async function generate() {
+  const cfg = typeConfig[currentType];
+  const symptom = document.getElementById('symptomInput').value.trim();
+  if (cfg.showSymptom && !symptom) {
+    alert('症状名を入力してください。');
+    return;
+  }
+  const isUpload = document.getElementById('pane-upload').classList.contains('active');
+  if (isUpload && !parsedData) {
+    alert('先にヒアリングシートを読み込んでください。');
+    return;
+  }
+
+  document.getElementById('genBtn').disabled = true;
+  document.getElementById('loadingEl').style.display = 'flex';
+  document.getElementById('errorBox').style.display = 'none';
+  document.getElementById('resultArea').style.display = 'none';
+
+  const clinicInfo = buildClinicInfo();
+  const targetLabel = cfg.showSymptom ? symptom : cfg.label;
+  const prompt = `今回生成するページ：「${targetLabel}」\n\n---\n${clinicInfo}\n---\n\n${sectionInstructions[currentType]}`;
+
+  try {
+    const resp = await fetch('/.netlify/functions/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: cfg.system(targetLabel),
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+    const text = data.content?.map(b => b.text || '').join('') || '';
+    const formatted = text.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    document.getElementById('resultBox').innerHTML = formatted;
+    document.getElementById('resultLabel').textContent = `「${targetLabel}」の原稿が完成しました`;
+    document.getElementById('resultArea').style.display = 'block';
+    document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth' });
+  } catch (err) {
+    document.getElementById('errorBox').textContent = `エラーが発生しました：${err.message}`;
+    document.getElementById('errorBox').style.display = 'block';
+  } finally {
+    document.getElementById('genBtn').disabled = false;
+    document.getElementById('loadingEl').style.display = 'none';
+  }
+}
+
+function copyResult() {
+  const text = document.getElementById('resultBox').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  });
+}
+
+document.getElementById('symptomInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') generate();
+});
+
+selectType('acute');
+</script>
+</body>
+</html>
