@@ -29,49 +29,54 @@ exports.handler = async function (event) {
         path: "/v1/messages",
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json; charset=utf-8",
           "x-api-key": API_KEY,
           "anthropic-version": "2023-06-01",
-          "Content-Length": Buffer.byteLength(requestBody),
+          "Content-Length": Buffer.byteLength(requestBody, "utf8"),
         },
       };
 
       let statusCode = 200;
       const req = https.request(options, (res) => {
         statusCode = res.statusCode;
-        let data = "";
-        res.on("data", (chunk) => { data += chunk; });
+        const chunks = [];
+        res.on("data", (chunk) => { chunks.push(chunk); });
         res.on("end", () => {
+          const data = Buffer.concat(chunks).toString("utf8");
           resolve({ statusCode, data });
         });
       });
 
       req.on("error", reject);
-      req.write(requestBody);
+      req.write(requestBody, "utf8");
       req.end();
     });
 
     if (result.statusCode !== 200) {
       return {
         statusCode: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+        },
         body: JSON.stringify({
-          error: {
-            message: `Anthropic APIエラー (${result.statusCode}): ${result.data}`
-          }
+          error: { message: `Anthropic APIエラー (${result.statusCode}): ${result.data}` }
         }),
       };
     }
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
       body: result.data,
     };
   } catch (err) {
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
       body: JSON.stringify({ error: { message: err.message } }),
     };
   }
