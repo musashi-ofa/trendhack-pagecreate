@@ -9,9 +9,7 @@ exports.handler = async function (event) {
   if (!API_KEY) {
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: { message: "APIキーが設定されていません。" }
-      }),
+      body: JSON.stringify({ error: { message: "APIキーが設定されていません。" } }),
     };
   }
 
@@ -19,7 +17,7 @@ exports.handler = async function (event) {
     const { system, messages } = JSON.parse(event.body);
 
     const requestBody = JSON.stringify({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 4000,
       system,
       messages,
@@ -38,10 +36,14 @@ exports.handler = async function (event) {
         },
       };
 
+      let statusCode = 200;
       const req = https.request(options, (res) => {
+        statusCode = res.statusCode;
         let data = "";
         res.on("data", (chunk) => { data += chunk; });
-        res.on("end", () => { resolve(data); });
+        res.on("end", () => {
+          resolve({ statusCode, data });
+        });
       });
 
       req.on("error", reject);
@@ -49,14 +51,27 @@ exports.handler = async function (event) {
       req.end();
     });
 
+    if (result.statusCode !== 200) {
+      return {
+        statusCode: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          error: {
+            message: `Anthropic APIエラー (${result.statusCode}): ${result.data}`
+          }
+        }),
+      };
+    }
+
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: result,
+      body: result.data,
     };
   } catch (err) {
     return {
-      statusCode: 500,
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ error: { message: err.message } }),
     };
   }
